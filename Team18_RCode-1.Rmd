@@ -1,0 +1,643 @@
+---
+title: "data mining project report"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r global_options, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# I. Cover Page:
+## Subject Name: Data Mining and Predictive Analysis
+## Project title: Airbnb rentals analysis for new property acquisition and improved management.
+ ### Market assigned to the team: New York City.
+"We, the undersigned, certify that the report submitted is our own original work; all authors participated in the work in a substantive way; all authors have seen and approved the report as submitted; the text, images, illustrations, and other items included in the manuscript do not carry any infringement/plagiarism issue upon any existing copyrighted materials."
+
+### Team members:
+
+Aditya Kismatrao
+Sujay Khandekar
+Vedant Srivastava
+Jaidev Jampani
+Priyad Sompura
+
+# II. Executive Summary:
+Our first business proposal was to focus on initial acquisition of property, thus we looked at important features in the data affecting high_booking_rate. Since quite a few listings had missing zip code, we used the latitude and longitude of the listings to map them into zip codes. New York City zip codes' GeoJSON information was used to achieve this. This GeoJSON information was also used with the ‘leaflet’ R package to plot interactive New York City maps. Since we did not find GeoJSON information for the zip codes that are in New Jersey, about 1800 New Jersey listings, out of the 32,143 total listings in New York, have not been included in the following analysis. Out of all the important features that we discovered from our model, location was a stand out feature and only one which could be used before buying the property. Key findings from location analysis were locations with high score for review_score_location tend to be expensive and booking rates over there are high as well, but they are not affordable for novice investors but best for veteran investors. Some outskirt areas in new york had low audience reach but high booking rate and high review scores for location and hence, novice investors should compete for these locations. 
+Second business proposal focused on management, where we looked at how to be a superhost for the market of New York. Using the xgboost.importance function we were able to plot a pie chart showing features listed on the airbnb website that helped qualify a host as a superhost for new york.
+Our third business proposal looked at important amenities to increase the booking rate.
+
+
+
+
+# III. Research Questions:
+1. Which areas in New York are the best for the investor to buy property for Airbnb listings and identify important parameters required for initial acquisition of property?
+            1.1) Which areas have high review scores?
+            1.2) Which areas have a high average booking rate?
+            1.3) Variations in the rental price in different areas?
+Reason: New York is a very vast market and so preferences of people are different in     different areas. Thus, it is very important to determine the best area where the investor should invest. So, after getting answers to these questions, we could give advice to the investor regarding the location in New York where he/she should invest. We also wanted to identify parameters which are responsible in determining these locations and if there’s any definite specific formula for obtaining a high booking rate at specific locations.
+      
+
+
+2. Once a property is acquired, what are the other factors that influence the high booking rate on the property?
+	2.1) Does being a Super Host increase your chances of having a high booking rate on         the property?
+	2.2) What are the important features for a host to be a Super Host in the New York market?
+	2.3) What other features or amenities should be added to the property to ensure high booking rate?
+Reason: Buying a property on a good location alone would not ensure a high booking rate. There are other factors that need to be considered after the acquisition as well. First of all, we look at the influence of being a Super Host on a high booking rate. Based on the website of Airbnb, there are some conditions mentioned to achieve superhost status, but those are the minimum requirements and are for all the hosts worldwide. Thus, we want to analyze what all additional factors are associated for becoming a superhost along with those mentioned on their website, specific to the New York market. On finding those important factors, the investor can focus on those factors to get the Super Host status. Also, we want to find the features and amenities that would help in getting a high booking rate for the properties in New York market. 
+  
+
+Questions which were rejected before choosing above questions?
+Does description and access info about rentals have any effect on booking rate?
+Using open street map API to analyse if the tourist spots across your airbnb listing have any effect on booking rate?
+What is the effect of hiring professional management?
+Reason: Our main objective was to focus on initial acquisition and although we were very determined on choosing the 2nd question i.e API analysis, it was extremely time consuming and did not significantly affect the model. While we first thought of adopting topic modelling on access columns and sentimental analysis on both these columns but superhost and amenities analysis gave us way more information. Also the first map analysis gave us the importance of location and how other parameters affected its selection and hence we rejected to analyze the effect of working host listing count columns.
+
+
+
+# IV. Methodology:
+## Data preparation Process and mining:
+1. Converted some numeric columns such as price and security deposit into model usable format by removing $ from them.
+2.Subdivided categorical variables into different categories by looking at the skewness of the distribution(found from histograms), and created new category for missing values named as unknown category (host related features,review scores features)
+3. Imputed missing values in security deposit and cleaning fee with zero, and the missing values in bed, bedroom and bathroom were imputed with their respective means.
+4.Created host_since feature consisting of number of days the host has been with airbnb, by converting date into numbers.
+5.Created new features for each amenity with a total of 219 amenities. Only used most important amenities in the final model, which were given by models feature importance.
+6.Some features with multiple categories were reduced to include only the most important ones, such as property type.
+## Supplementary Exploratory Analysis:
+For analyzing the first objective of initial acquisition we developed graphs to identify how many new properties were added over the past few years. And surprisingly there was a sharp decline in the new properties added after 2016. The reason associated was due to the Anti-airbnb bill passed in New York which made it illegal to advertise short term rentals for entire homes. The attempt was to target landlords who bought apartments and used them to operate illegal hotels.
+
+
+##  List of variables selected to use in the final model:
+"high_booking_rate", "host_is_superhost","amenities_.Self.check.in.","host_response_time","amenities_.Hot.water.","amenities_.Free.street.parking.","amenities_.Dishes.and.silverware.","amenities_Refrigerator","amenities_.Coffee.maker.","host_listings_count","amenities_Microwave","cancellation_policy","availability_90","availability_60","availability_30","availability_365","amenities_.Extra.pillows.and.blankets.","longitude","amenities_.Cooking.basics.","amenities_.Luggage.dropoff.allowed.","latitude","amenities_.Bed.linens.","amenities_.Hair.dryer.","amenities_Keypad","minimum_nights","extra_people","cleaning_fee","amenities_.Family.kid.friendly.","guests_included","price","property_type","amenities_Shampoo","amenities_Stove","amenities_Iron","amenities_.translation.missing..en.hosting_amenity_50.","review_scores_value","amenities_.Long.term.stays.allowed.","price_score","amenities_.24.hour.check.in.","host_response_rate","amenities_Hangers","amenities_.Garden.or.backyard.","amenities_Oven","amenities_.Fire.extinguisher.","amenities_Gym","amenities_.Laptop.friendly.workspace.","amenities_Elevator","maximum_nights","amenities_.Patio.or.balcony.","review_scores_accuracy","review_scores_checkin","amenities_Lockbox","host_verifications","amenities_.First.aid.kit.","amenities_.Carbon.monoxide.detector.","security_deposit","amenities_Internet","review_scores_communication","amenities_.Single.level.home.","amenities_Pool","amenities_Essentials","amenities_.Pets.live.on.this.property.","amenities_.Bedroom.comforts.","amenities_.Bathroom.essentials.","amenities_.Toilet.paper.","amenities_.Well.lit.path.to.entrance.","amenities_Dog.s.","amenities_.Bath.towel.","amenities_.Smoke.detector.","bathrooms","accommodates","review_scores_location","amenities_Wifi","review_scores_value","review_scores_cleanliness","host_identity_verified","is_location_exact","requires_license","require_guest_profile_picture","amenities","host_sinceD","amenities_.Pack..n.Play.travel.crib.","amenities_.No.stairs.or.steps.to.enter.","amenities_.Body.soap.","amenities_.Room.darkening.shades.","amenities_.Safety.card.","amenities_Bathtub","amenities_.Children.s.books.and.toys.","amenities_Heating","amenities_.Hot.tub.","amenities_.Wide.entrance.for.guests.","amenities_Dishwasher","amenities_.Extra.space.around.bed.","amenities_Cat.s.","amenities_Netflix","amenities_.Cable.TV.","amenities_.Luggage.dropoff.allowed.","amenities_.Smart.TV.","amenities_Internet","bedrooms","amenities_Printer","amenities_.Disabled.parking.spot.","amenities_.Mini.fridge.","amenities_.Gas.oven.","amenities_.24.hour.check.in.","amenities_.Full.kitchen.","amenities_Washer","amenities_Other","instant_bookable","amenities_.Formal.dining.area.","room_type","review_scores_ratingOG"
+
+
+
+
+
+## Kaggle model information regarding specific market Variable Selection Process:
+Model from Kaggle gave us an initial understanding of all the features. We used the variable importance from the kaggle model and used that to shortlist the few features and then trained the xgboost model on selected features for the new york data to finalize the features to use to get highest accuracy. One major strategy which we incorporated was using the area column for New York Specific market. Since we found some discrepancies in the market column we used latitude and longitude columns to map the values into the area column which was then divided into 50 parts. This significantly improved the efficiency of the model.
+
+## Reasons for choosing specific variables
+Amenities: 
+All the features of amenities were selected from feature importance after running the model with all the amenities and shortlisting to 55 amenities.
+host_is_superhost,host_listing_count,,host_response_time,host_response_rate,host_verifications,host_identity_verified: 
+Host related features were selected because host_is_superhost was one of the most important features for high_booking_rate from the initial model.
+
+host_sinceD: This variable represents the number of days the host has been listing his/her property with Airbnb, also it is an important feature on deciding whether a host is a superhost. And it was ranked very highly in the results of feature importance.
+
+Review_scores features:
+All the review score features such as review scores rating, review scores accuracy etc are included because, according to our intuition, reviews are the first thing users look at and since we don’t have actual reviews of the property we are assuming these are quantifications of the actual reviews.(review_scores_rating is renamed to review_scores_ratingsOG)
+
+Latitude and longitude:
+After looking at the distribution of price and high booking rate across new york, we found out that some areas were cheap but still had high average booking rate thus we selected latitude and longitude. Accommodates, beds, room_type were used because of its descriptive nature in explaining size of property.
+
+Cancellation policy:
+Cancellation policy was used because on airbnb website cancellation rate was mentioned as an important factor in deciding whether a host is superhost.
+
+Availability_90,availability_30,availability_60,availability_365:
+All four of the listing availability variables were used because even though they have high collinearity amongst them our final model used was Xgboost model and Xgboost output is robust to multicollinearity issues.We did not want to miss out on any important variables. 
+Kaggle model on the entire dataset had availability_30 as the most important variable.For the new york market behaviour could have been different because of people booking listings in advance, being the most popular city in the USA.
+
+Price: This is rent of the property. Price is probably the second most important factor that users look at while booking thus included. 
+
+Remaining variables used are explained in Appendix.
+
+
+## Predictive analysis and guiding process for investors.
+After working out various models, the xg boost model was chosen pertaining to superior performance measures. At first we incorporated random forest however lower specificity and accuracy made us shift to xgboost model for predictive analysis. 
+In the most layman terms, using this model an investor can input information pertaining to all the variables and the model will predict whether the booking rate is high or low. But based on the business proposal and analysis done, this finding and analysis will not only guide novice and veteran hosts for acquiring properties but this will also give them the overview based on research proposals regarding what all factors they can add or modify to acquire a high booking rate. 
+
+
+
+
+# V. Results and Findings:
+#model result and summary:
+```{r,echo=FALSE}
+options( java.parameters = "-Xmx6g")
+
+library(dplyr)
+library(tidyr)
+
+# Create example data frame
+
+library(caret)
+
+library('tidyverse')
+library('tidymodels')
+library('plotly')
+library('skimr')
+library(ggplot2)
+library(mlr)
+library(xgboost)
+#pkgs <- c("factoextra",  "NbClust")
+#install.packages(pkgs)
+library('factoextra')
+library('NbClust')
+#install.packages('leaflet')
+library('leaflet')
+library('rgdal')
+#install.packages('tigris')
+library('tigris')
+#install.packages('httr')
+library('httr')
+#install.packages('sp')
+library('sp')
+#install.packages('webshot')
+library('webshot')
+
+f = file.choose()
+completeData<-read.csv(f)
+completeData<-completeData %>% 
+  filter(substr(completeData$X.randomControl.,1,3)==116)
+
+#completeData<-completeData[,-c(1,39,250)]
+
+
+colsToFactor <- c('bed_type','cancellation_policy','room_type','host_has_profile_pic','host_identity_verified','host_is_superhost','instant_bookable','is_location_exact','require_guest_phone_verification','require_guest_profile_picture','requires_license','review_scores_accuracy','review_scores_checkin','review_scores_cleanliness','review_scores_communication','review_scores_location','review_scores_value')
+completeData <- completeData %>%
+  mutate_at(colsToFactor, ~factor(.))
+
+
+#completeData$high_booking_rate<-as.factor(completeData$high_booking_rate)
+#colnames(completeData)
+
+colsToFactor<-c(43:245)
+completeData <- completeData %>%
+  mutate_at(colsToFactor, ~factor(.))
+#completeData<-completeData[,-96]
+
+
+
+gc()
+
+
+
+#completeData$high_booking_rate<-as.factor(completeData$high_booking_rate)
+#levels(completeData$high_booking_rate) <- c("No", "Yes")
+
+
+gc()
+
+#completeData<-completeData %>% filter(market=='New York')
+
+set.seed(1234)
+
+library(data.table)
+
+library(Matrix)
+
+
+
+myvars <- c("high_booking_rate", "host_is_superhost","amenities_.Self.check.in.","host_response_time",
+            "amenities_.Hot.water.","amenities_.Free.street.parking.","amenities_.Dishes.and.silverware.","amenities_Refrigerator","amenities_.Coffee.maker.","host_listings_count","amenities_Microwave","cancellation_policy","availability_90","availability_60","availability_30","availability_365","amenities_.Extra.pillows.and.blankets.","longitude","amenities_.Cooking.basics.","amenities_.Luggage.dropoff.allowed.","latitude","amenities_.Bed.linens.","amenities_.Hair.dryer.","amenities_Keypad","minimum_nights","extra_people","cleaning_fee","amenities_.Family.kid.friendly.","guests_included","price","property_type","amenities_Shampoo","amenities_Stove","amenities_Iron","amenities_.translation.missing..en.hosting_amenity_50.","review_scores_value","amenities_.Long.term.stays.allowed.","price_score","amenities_.24.hour.check.in.","host_response_rate","amenities_Hangers","amenities_.Garden.or.backyard.","amenities_Oven","amenities_.Fire.extinguisher.","amenities_Gym","amenities_.Laptop.friendly.workspace.","amenities_Elevator","maximum_nights","amenities_.Patio.or.balcony.","review_scores_accuracy","review_scores_checkin","amenities_Lockbox","host_verifications","amenities_.First.aid.kit.","amenities_.Carbon.monoxide.detector.","security_deposit","amenities_Internet","review_scores_communication","amenities_.Single.level.home.","amenities_Pool","amenities_Essentials","amenities_.Pets.live.on.this.property.","amenities_.Bedroom.comforts.","amenities_.Bathroom.essentials.","amenities_.Toilet.paper.","amenities_.Well.lit.path.to.entrance.","amenities_Dog.s.","amenities_.Bath.towel.","amenities_.Smoke.detector.","bathrooms","accommodates","review_scores_location","amenities_Wifi","review_scores_value","review_scores_cleanliness","host_identity_verified","is_location_exact","requires_license","require_guest_profile_picture","amenities","host_sinceD","amenities_.Pack..n.Play.travel.crib.","amenities_.No.stairs.or.steps.to.enter.","amenities_.Body.soap.","amenities_.Room.darkening.shades.","amenities_.Safety.card.","amenities_Bathtub","amenities_.Children.s.books.and.toys.","amenities_Heating","amenities_.Hot.tub.","amenities_.Wide.entrance.for.guests.","amenities_Dishwasher","amenities_.Extra.space.around.bed.","amenities_Cat.s.","amenities_Netflix","amenities_.Cable.TV.","amenities_.Luggage.dropoff.allowed.","amenities_.Smart.TV.","market","amenities_Internet","bedrooms","amenities_Printer","amenities_.Disabled.parking.spot.","amenities_.Mini.fridge.","amenities_.Gas.oven.","amenities_.24.hour.check.in.","amenities_.Full.kitchen.","amenities_Washer","amenities_Other","instant_bookable","amenities_.Formal.dining.area.","room_type","review_scores_ratingOG")
+
+completeData <- completeData[myvars]
+
+library(dummies)
+
+completeData2 <- dummy.data.frame(completeData, sep = ".")
+
+#levels(completeData$host_is_superhost) <- c(0,1,2)
+#target<-completeData2$high_booking_rate
+
+dffTrain <- completeData2%>% sample_frac(0.7)
+target<-dffTrain$high_booking_rate
+dffTest <- dplyr::setdiff(completeData2, dffTrain) 
+
+trainMatrix <- data.matrix(dffTrain[-1])
+testMatrix <- data.matrix(dffTest[-1])
+trainMatrix<-scale(trainMatrix)
+testMatrix<-scale(testMatrix)
+
+#dim(dffTrain)
+
+param <- list("objective" = "binary:logistic",scoring='auc')
+
+
+nround = 195            #this number is the number of trees when test mlogloss is minimum during cross-validation
+bst = xgboost(data = trainMatrix, label = target, param=param, nrounds = nround)
+
+#predict the model
+
+ypred = predict(bst, testMatrix)
+
+pred <-  as.numeric(ypred > 0.30)
+CM_Validation <- confusionMatrix(as.factor(pred),as.factor(dffTest$high_booking_rate))
+CM_Validation
+
+
+importance <- xgb.importance(feature_names = colnames(completeData2[-1]), model = bst)
+importance
+
+
+
+```
+
+```{r}
+importance
+
+CM_Validation
+```
+
+
+We have used Xgboost as our model for predicting booking rate for the market of new york. Model has accuracy of 87.93 for the threshold that we have kept as 0.25 with high sensitivity of 0.8918 and specificity of 0.8321. Since our first business proposal is for investors looking for new acquisition of property we want to present them with as many correct options as possible.Thus we have kept the threshold of our model at 0.25 in order to increase the specificity and maintain trade off between accuracy, specificity and sensitivity. Even though this impacts the sensitivity and accuracy by a small margin it is not significant and for our business proposal this threshold is more appropriate.
+
+### New properties added in New York over time
+
+
+Data <- read_csv("airbnbTrain.csv")
+
+```{r}
+f1 = file.choose()
+Data <- read_csv(f1)
+```
+
+
+```{r,echo=FALSE}
+library("dplyr")
+
+NyData1 <- Data %>% 
+  filter(substr(Data$`{randomControl}`, 1,3) == 116)
+
+```
+
+```{r,echo=FALSE}
+NyData1$host_since = as.Date(NyData1$host_since, "%m/%d/%Y")
+NyData1$host_since = as.factor(format(NyData1$host_since, "%Y"))
+```
+
+```{r,echo=FALSE}
+plot1 <- ggplot(data = NyData1) + 
+  geom_histogram(aes(host_since), stat = "count", fill = 'red',alpha = 0.85) + 
+  theme_minimal(base_size=13)+xlab("")+ylab("") + 
+  ggtitle("The Number of New Property in New York")
+
+plot1
+```
+###  As can be seen from the graph, the addition of new properties has an increase till 2015, after that the number of new properties added is decreasing. After analysing it, we found out the reason for the decrease is due to an anti airbnb bill that was passed in New York on 16th June, 2016. According to that bill it became illegal to advertise short term rentals (less than 30 days) for the entire home.
+
+## Q1 Where in New York should investors invest?
+To answer this question we need to find out areas of New York which are most profitable to invest. For this we have analysed the data based on the average location score of the different boroughs in new york and the average booking rate and the average rental price of the listings in these boroughs.
+
+
+
+```{r,echo=FALSE}
+f2 = file.choose()
+completeData<-read.csv(f2)
+
+completeData<-completeData %>% filter(substr(completeData$X.randomControl., 1,3) == 116)
+
+f3 = file.choose()
+ny_zipcodes_geom <- readOGR(f3, verbose = F)
+
+completeData_visual <- completeData
+completeData_visual_spdf <- completeData_visual
+coordinates(completeData_visual_spdf) <- ~longitude + latitude
+proj4string(completeData_visual_spdf) <- proj4string(ny_zipcodes_geom)
+matches <- over(completeData_visual_spdf, ny_zipcodes_geom)
+completeData_visual <- cbind(completeData_visual, matches)
+completeData_visual <- completeData_visual %>% mutate(zcta = fct_explicit_na(zcta))
+
+completeData_visual_summary <- completeData_visual %>% group_by(zcta) %>% summarise(avg_booking_rate = mean(high_booking_rate), avg_location_score = mean(review_scores_location), avg_price = mean(price))
+
+map_data <- geo_join(ny_zipcodes_geom, completeData_visual_summary, "zcta", "zcta")
+
+popup_location <- paste0("Zipcode: ", as.character(map_data$zcta), " Location_Score: ", as.character(map_data$avg_location_score))
+popup_booking <- paste0("Zipcode: ", as.character(map_data$zcta), " Booking_Rate: ", as.character(map_data$avg_booking_rate))
+popup_price <- paste0("Zipcode: ", as.character(map_data$zcta), " Price: ", as.character(map_data$avg_price))
+pal_location <- colorNumeric (palette = c("red", "green", "blue"), domain = map_data$avg_location_score)
+pal_booking <- colorNumeric (palette = c("red", "green", "blue"), domain = map_data$avg_booking_rate)
+pal_price <- colorNumeric (palette = c("yellow", "green", "blue"), domain = map_data$avg_price)
+
+```
+
+
+### 1.a Which neighborhoods have high review scores for location?
+```{r,echo=FALSE}
+leaflet(map_data) %>%
+addTiles() %>%
+addPolygons(fillColor = ~pal_location(avg_location_score), fillOpacity = 0.7, weight = 0.7, color = "#b2aeae", popup = popup_location) %>% addProviderTiles("CartoDB.Positron") %>% setView(-73.98, 40.75, zoom = 11) %>% addLegend(pal = pal_location, values = map_data$avg_location_score, position = "bottomright", title = "Average Location Score")
+```
+
+In Manhattan, the downtown neighborhoods, near the Empire State building, Times Square, Financial District and the neighborhoods near and to the west of Central Park have an average score around 9.9. In Staten Island, the southern areas close to tourist attractions like museums and ferry stations have a score of 10. The parts of Brooklyn and Queens that the closer to Manhattan, have better scores than the parts that are farther away. Perhaps, this could be because the subways lines go to the parts closer to Manhattan and not to the other parts. The north-west coastal part of the Bronx has high scores, which could be because of coastal attractions in that part.
+
+
+
+
+### 1.b Which neighborhoods have a high booking rate?
+```{r,echo=FALSE}
+
+leaflet(map_data) %>%
+addTiles() %>%
+addPolygons(fillColor = ~pal_booking(avg_booking_rate), fillOpacity = 0.7, weight = 0.7, color = "#b2aeae", popup = popup_booking) %>% addProviderTiles("CartoDB.Positron") %>% setView(-73.98, 40.75, zoom = 11) %>% addLegend(pal = pal_booking, values = map_data$avg_booking_rate, position = "bottomright", title = "Average Booking Rate")
+
+```
+
+It is interesting to observe that in all the five boroughs, the locations that have higher average location scores have lower booking rate. This can be explained by the rental price in the next plot.
+
+
+
+### 1.c How does Airbnb rental price vary across the neighborhoods?
+```{r,echo=FALSE}
+leaflet(map_data) %>%
+addTiles() %>%
+addPolygons(fillColor = ~pal_price(avg_price), fillOpacity = 0.7, weight = 0.7, color = "#b2aeae", popup = popup_price) %>% addProviderTiles("CartoDB.Positron") %>% setView(-73.98, 40.75, zoom = 11) %>% addLegend(pal = pal_price, values = map_data$avg_price, position = "bottomright", title = "Average Price")
+```
+
+In all the boroughs, the average price is higher in the neighborhoods with higher location scores. Neighborhoods with high location scores are the most desirable ones. They can be priced high, but they also have very high purchase costs. The real estate in desirable neighborhoods of New York is very expensive. The investor has to charge a high rental price to recoup the purchase cost or to pay the mortgage. Also, they cannot be priced higher than hotels, since hotels tend to have many amenities, like pool, spa, restaurants, etc. These high priced rentals would have lower booking rates and would be popular with the affluent tourists. The return on the investment would be by margin rather than by volume of bookings.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Q2 How to be a superhost in the New York market?
+
+Airbnb has mentioned requirements to be a superhost on their website but it is in general for all the markets.This question helps in finding out what are the factors different from one mentioned on airbnb website to become superhost in market of new york? This question will help us understand what superhost does more or less than the normal host. We have asked this question because whether a host is superhost or not is one of the most important feature affecting booking rate according to our model, thus detailed analysis of this feature was required.
+
+ ### Q2 a. Is there correlation between review scores rating, host response rate and whether the host is superhost?
+Airbnb website mentions that to be a superhost host should maintain a 90% response rate and higher and more than 4.8 overall review score rating. Let us validate that for the market of new york.
+
+```{r,echo=FALSE}
+f5 = file.choose()
+dataPlot <- read_csv(f5)
+dataplot<-na.omit(dataPlot,cols='host_is_superhost')
+dataNySuperHost <- dataPlot %>% 
+  select(host_is_superhost, host_response_rate, review_scores_rating)
+plot9 <- dataNySuperHost %>% 
+  ggplot(aes(x = host_response_rate, y = review_scores_rating, color = host_is_superhost)) + geom_point()
+
+plot9+  theme(
+  axis.text.x = element_blank())
+
+
+```
+
+From the above graph it can be inferred that superhost usually has high review scores rating and high response rate. This validates the requirements mentioned on the airbnb website. But we are interested in other features affecting superhost status.
+
+ ### Q 2b. What are all the features important for a host to be a superhost in the New York market?
+
+```{r,echo=FALSE}
+f4 = file.choose()
+completeData<-read.csv(f4)
+completeData<-completeData %>% 
+  filter(substr(completeData$X.randomControl.,1,3)==116)
+
+#colnames(completeData)
+#completeData<-completeData[,-c(1,39,250)]
+
+
+colsToFactor <- c('bed_type','cancellation_policy','room_type','host_has_profile_pic','host_identity_verified','host_is_superhost','instant_bookable','is_location_exact','require_guest_phone_verification','require_guest_profile_picture','requires_license','review_scores_accuracy','review_scores_checkin','review_scores_cleanliness','review_scores_communication','review_scores_location','review_scores_value')
+completeData <- completeData %>%
+  mutate_at(colsToFactor, ~factor(.))
+
+
+#completeData$high_booking_rate<-as.factor(completeData$high_booking_rate)
+colnames(completeData)
+
+colsToFactor<-c(43:245)
+completeData <- completeData %>%
+  mutate_at(colsToFactor, ~factor(.))
+#completeData<-completeData[,-96]
+
+
+
+gc()
+
+
+
+#completeData$high_booking_rate<-as.factor(completeData$high_booking_rate)
+#levels(completeData$high_booking_rate) <- c("No", "Yes")
+
+
+gc()
+
+#completeData<-completeData %>% filter(market=='New York')
+
+set.seed(1234)
+
+library(data.table)
+
+library(Matrix)
+
+
+
+myvars <- c("high_booking_rate", "host_is_superhost","amenities_.Self.check.in.","host_response_time",
+            "amenities_.Hot.water.","amenities_.Free.street.parking.","amenities_.Dishes.and.silverware.","amenities_Refrigerator","amenities_.Coffee.maker.","host_listings_count","amenities_Microwave","cancellation_policy","availability_90","availability_60","availability_30","availability_365","amenities_.Extra.pillows.and.blankets.","longitude","amenities_.Cooking.basics.","amenities_.Luggage.dropoff.allowed.","latitude","amenities_.Bed.linens.","amenities_.Hair.dryer.","amenities_Keypad","minimum_nights","extra_people","cleaning_fee","amenities_.Family.kid.friendly.","guests_included","price","property_type","amenities_Shampoo","amenities_Stove","amenities_Iron","amenities_.translation.missing..en.hosting_amenity_50.","review_scores_value","amenities_.Long.term.stays.allowed.","price_score","amenities_.24.hour.check.in.","host_response_rate","amenities_Hangers","amenities_.Garden.or.backyard.","amenities_Oven","amenities_.Fire.extinguisher.","amenities_Gym","amenities_.Laptop.friendly.workspace.","amenities_Elevator","maximum_nights","amenities_.Patio.or.balcony.","review_scores_accuracy","review_scores_checkin","amenities_Lockbox","host_verifications","amenities_.First.aid.kit.","amenities_.Carbon.monoxide.detector.","security_deposit","amenities_Internet","review_scores_communication","amenities_.Single.level.home.","amenities_Pool","amenities_Essentials","amenities_.Pets.live.on.this.property.","amenities_.Bedroom.comforts.","amenities_.Bathroom.essentials.","amenities_.Toilet.paper.","amenities_.Well.lit.path.to.entrance.","amenities_Dog.s.","amenities_.Bath.towel.","amenities_.Smoke.detector.","bathrooms","accommodates","review_scores_location","amenities_Wifi","review_scores_value","review_scores_cleanliness","host_identity_verified","is_location_exact","requires_license","require_guest_profile_picture","amenities","host_sinceD","amenities_.Pack..n.Play.travel.crib.","amenities_.No.stairs.or.steps.to.enter.","amenities_.Body.soap.","amenities_.Room.darkening.shades.","amenities_.Safety.card.","amenities_Bathtub","amenities_.Children.s.books.and.toys.","amenities_Heating","amenities_.Hot.tub.","amenities_.Wide.entrance.for.guests.","amenities_Dishwasher","amenities_.Extra.space.around.bed.","amenities_Cat.s.","amenities_Netflix","amenities_.Cable.TV.","amenities_.Luggage.dropoff.allowed.","amenities_.Smart.TV.","market","amenities_Internet","bedrooms","amenities_Printer","amenities_.Disabled.parking.spot.","amenities_.Mini.fridge.","amenities_.Gas.oven.","amenities_.24.hour.check.in.","amenities_.Full.kitchen.","amenities_Washer","amenities_Other","instant_bookable","amenities_.Formal.dining.area.","room_type","review_scores_ratingOG")
+
+completeData <- completeData[myvars]
+
+library(dummies)
+
+completeData2 <- dummy.data.frame(completeData[-2], sep = ".")
+
+levels(completeData$host_is_superhost) <- c(0,1,2)
+target<-completeData$host_is_superhost
+
+
+trainMatrix <- data.matrix(completeData2[-1])
+#testMatrix <- data.matrix(dffTest[-1])
+trainMatrix<-scale(trainMatrix)
+#testMatrix<-scale(testMatrix)
+
+#dim(dffTrain)
+
+param <- list("objective" = "multi:softprob",scoring='auc',"num_class"=4)
+
+
+nround = 195            #this number is the number of trees when test mlogloss is minimum during cross-validation
+bst = xgboost(data = trainMatrix, label = target, param=param, nrounds = nround)
+
+#predict the model
+
+#ypred = predict(bst, testMatrix)
+
+#pred <-  as.numeric(ypred > 0.5)
+#CM_Validation <- confusionMatrix(as.factor(pred),as.factor(dffTest$high_booking_rate))
+#CM_Validation
+
+
+importance <- xgb.importance(feature_names = colnames(completeData2[-1]), model = bst)
+importance
+```
+
+```{r}
+importance
+```
+
+This is a table of all the features in the data and their importance gain towards deciding host status from the model of XGboost.
+
+
+```{r,echo=FALSE}
+library(ggplot2)
+importance2 <- within(importance, Feature[Gain<0.025] <- 'Other')
+importance2<-importance2 %>% 
+  mutate(importance=Gain/sum(Gain)*100)
+summed<-sum(importance2[11:132,5])
+library(tidyverse)
+importance2<-importance2 %>% add_row(Feature = "Other", importance = summed)
+importance2<-importance2[c(1:10,133),]
+
+
+# Barplot
+bp<- ggplot(importance2, aes(x="", y=importance, fill=Feature))+
+geom_bar(width = 1, stat = "identity")
+#bp
+
+pie <- bp + coord_polar("y", start=0)
+#pie
+
+
+
+blank_theme <- theme_minimal()+
+  theme(
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.border = element_blank(),
+  panel.grid=element_blank(),
+  axis.ticks = element_blank(),
+  plot.title=element_text(size=14, face="bold")
+  )
+library(scales)
+pie + geom_text(aes(label = paste0(round(importance2$importance))), position = position_stack(vjust = 0.5))
+
+```
+
+It can be seen from the above pie chart that 10 features contribute to almost 60 % importance for whether a host is superhost. Features listed on airbnb website in requirements to become superhost which can be seen in the above top 10 features are host_response_rate,review_score_ratings, host_response_time. Other important points to notice here are superhost generally get good ratings in review scores and they are most likely airbnb hosts for a long time with multiple properties. Area is also important for becoming a superhost along with total amenities provided.
+
+## Q3 What amenities are most important for Airbnb users in the New York market?
+
+
+```{r,echo=FALSE}
+
+completeData3 <- dummy.data.frame(completeData, sep = ".")
+
+#levels(completeData$host_is_superhost) <- c(0,1,2)
+target<-completeData$high_booking_rate
+
+
+trainMatrix <- data.matrix(completeData3[-1])
+#testMatrix <- data.matrix(dffTest[-1])
+trainMatrix<-scale(trainMatrix)
+#testMatrix<-scale(testMatrix)
+
+#dim(dffTrain)
+
+param <- list("objective" = "binary:logistic",scoring='auc')
+
+
+nround = 195            #this number is the number of trees when test mlogloss is minimum during cross-validation
+bst = xgboost(data = trainMatrix, label = target, param=param, nrounds = nround)
+
+#predict the model
+
+#ypred = predict(bst, testMatrix)
+
+#pred <-  as.numeric(ypred > 0.5)
+#CM_Validation <- confusionMatrix(as.factor(pred),as.factor(dffTest$high_booking_rate))
+#CM_Validation
+
+
+importance <- xgb.importance(feature_names = colnames(completeData3[-1]), model = bst)
+importance<-importance %>% filter(str_detect(Feature, "amenities_"))
+
+
+importance2 <- within(importance, Feature[Gain<0.0035] <- 'Other')
+importance2<-importance2 %>% 
+  mutate(importance=Gain/sum(Gain)*100)
+importance2<-importance2[-2,]
+summed<-sum(importance2[8:55,5])
+library(tidyverse)
+importance2<-importance2 %>% add_row(Feature = "Other", importance = summed)
+importance2<-importance2[c(1:7,56),]
+
+
+# Barplot
+bp<- ggplot(importance2, aes(x="", y=importance, fill=Feature))+
+geom_bar(width = 1, stat = "identity")
+
+
+
+
+```
+```{r}
+bp
+
+```
+ 
+ 
+For the market of new york most important amenities are free street parking, family kid friendly, internet and washer. Thus hosts can make sure that they are able to provide these amenities in order to increase their listings in booking rate. Amenity translation missing is amenity written in a language other than english. Thus, it’s possible that people who speak that language are attracted by that specific amenity.
+
+
+# VI. Conclusion and Discussion:
+## Obtained findings and final summary:
+In order to achieve a high booking rate throughout the year, the investor should acquire a property in a location that is popular with both tourists and business travelers. Hence latitude and longitude play a major role which is evident through both the model and visualizations and hence location selection is vital. 
+Based on those results, we divide our suggestion in two parts:
+If it is a new investor, then our advice would be to invest in areas near Staten Island Mall, Orchard Beach and Pelham Bay Park. 
+If it is a veteran investor, then our advice would be to invest in areas like Central Manhattan and the area near the airport. 
+Now moving onto the scenarios after the acquisition, we conclude that being a superhost does make a significant positive influence on high booking rate. For the New York market, having more number of properties, having a high response rate, high review rating, cleanliness and the location of the property are important for being a super host. 
+On analysing the different amenities, we concluded that having the availability of free street parking is very important and that makes sense as New York is a very busy and crowded area. Having a Family/Kid friendly tag also has a high importance. Including other basic amenities like internet and coffee maker, would also contribute in getting a high booking rate. 
+
+## Limitations:
+Imbalanced data: There was lack of data for multiple locations as well as unreliable data such as that of Manhattan where data, though ample, has multiple 0 valued locations and fewer 1’s. Thus, the booking rate is low but this is not accurate and actually not the case.
+Missing GeoJSON information for the zip codes that are in New Jersey, about 1800 New Jersey listings, out of the 32,143 total listings in New York.
+For the initial acquisition analysis, the current data on property mortgage prices is not available. This makes the analysis harder and less accurate.
+In the superhost analysis, a factor that makes a host a superhost is having less than 1% cancellation rate. The data on the cancellation policy was missing so this creates inaccuracy.
+
+
+## Future Research:
+From the above limitations it is evident that the data is imbalanced thus the most important thing would be to add more data for each borough of New York to get accurate predictions. To avoid discrepancies which we observed in the location data a more accurate market column would be extremely beneficial.
+Including the column for property buying or market rates would also significantly improve the model in predicting booking rate for initial acquisition of property.
+Adding text user reviews might also give us some interesting insights by performing sentimental analysis on them. Cancellation policy prices are absent and adding them might be fruitful for superhost analysis.
+Last but not the least, the better the model and hence filling the missing values, getting a more enriched data file would make the model and in turn this project extremely valuable for future investors.
+
+ 
+
+# VII. References:
+
+https://rpubs.com/jhofman/nycmaps
+https://stackoverflow.com/questions/43446802/how-to-download-ny-state-all-county-data-in-r-for-leaflet-map
+https://stackoverflow.com/questions/42543206/r-markdown-compile-error
+(Megan Rose Dickey, 2016), https://techcrunch.com/2016/06/17/airbnb-new-york-legislation/
+https://www.airbnb.com/superhost
+https://www.hackerearth.com/practice/machine-learning/machine-learning-algorithms/beginners-tutorial-on-xgboost-parameter-tuning-r/tutorial/
+Introduction to Supervised learning in R (For Xgboost)
+https://learn.datacamp.com/courses/supervised-learning-in-r-regression
+Predicting Airbnb prices with machine learning and location data
+https://towardsdatascience.com/predicting-airbnb-prices-with-machine-learning-and-location-data-5c1e033d0a5a
+https://www.analyticsvidhya.com/blog/2016/01/xgboost-algorithm-easy-steps/
+
+
+# VIII.Appendix:
+ Explanation of why these variables are used.(Other variables are explained in methodology)
+Minimum and maximum nights:
+While renting the property  what is the minimum or maximum days it is allowed to book are one of the most important factors which are looked at.
+Extra people: intuition is higher the limit of extra people allowed higher the booking rate will be , thus to validate that this variable is included.
+Cleaning_fee: Higher the cleaning fee lower the attractiveness of the listing, thus important to be included.
+property_type::In the new york some property types such as houses could be more attractive than apartments. Thus it is important to add this variable.
+Security_deposit: Property with high security deposits are generally very expensive, thus this variable is almost the same as price. But there could be some listings whose rent price is low but still they are charging high security deposits , so incorporating those listings in our model we have used a security deposit.
+Area: This is a substitute for a market column in the entire data but at a more granular level.This is created by forming clusters from latitude and longitude columns. Reason is that the market column had wrong listings listed in the wrong market and to create sub markets from one market.
+Price_score: This is a derived variable which was created by making clusters from accommodates, beds and bedrooms. Then by using the area column and this clusters percentile was created of price for each subgroup. This in the sense gives us the idea of how expensive the listing is for similar size other listings in a similar area.
+Bedrooms: It was evident from feature importance that this column was vital and logically as well while renting customer totally takes into consideration how many rooms he wants.
+Is_location_exact: This can be crucial in determining whether the given location is exact and if it isn’t then that might factor into a customer's decision to book a hotel.
+Bathrooms: The count of bathrooms in the property seems to be something that customers actively look for. So having a certain minimum number of bathrooms is needed.
+Room type: Along with the count, it is required to understand different room-types because customers can change their decision if there’s no kitchen.
+Require_guest_profile_picture: Knowing the guest is really crucial these days and to have trustworthy guests host need to have a general idea 
+Requires_License: Identification details are vital in to avoid any issues and keep a tab and this marks the authenticity of airbnb which in turn affects booking rate.
+Instant_bookable: This is a highly vital feature as evident from feature importance, and also it makes sense logically as it would be crucial for a customer to be able to book the property instantly, rather than waiting for the host to confirm their booking.
+
+
